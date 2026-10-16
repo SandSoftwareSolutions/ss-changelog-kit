@@ -1,0 +1,43 @@
+{
+  "name": "@sandsoftwaresolutions/changelog-kit",
+  "version": "0.1.0",
+  "description": "Add entries, cut releases, get release notes and lint a Keep a Changelog file.",
+  "type": "module",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/index.js"
+    }
+  },
+  "files": [
+    "src",
+    "README.md",
+    "LICENSE"
+  ],
+  "sideEffects": false,
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "test": "node --test",
+    "pack:check": "npm pack --dry-run"
+  },
+  "keywords": [
+    "changelog",
+    "release",
+    "keep-a-changelog",
+    "semver"
+  ],
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/SandSoftwareSolutions/ss-changelog-kit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/SandSoftwareSolutions/ss-changelog-kit/issues"
+  },
+  "homepage": "https://github.com/SandSoftwareSolutions/ss-changelog-kit#readme",
+  "publishConfig": {
+    "access": "public"
+  }
+}
