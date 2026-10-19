@@ -34,11 +34,13 @@ Tested against the changelogs of Foundry and Assay.
 
 | Function | Does |
 | --- | --- |
-| `parseChangelog(text)` | `{ preamble, unreleased, releases, links }`; each release has `version`, `date`, `yanked`, `sections` (`Added: [items]`) and `body` (the raw markdown, kept exactly) |
+| `parseChangelog(text)` | `{ preamble, unreleased, releases, links, unrecognised }`; each release has `version`, `date`, `yanked`, `sections` (`Added: [items]`) and `body` (the raw markdown, kept exactly) |
 | `addEntry(text, type, message)` | adds `- message` under `### type` in Unreleased; creates the section in the standard order (Added, Changed, Deprecated, Removed, Fixed, Security) or the whole Unreleased heading when needed |
 | `releaseVersion(text, version, date)` | turns Unreleased into `## [version] - date` and leaves a fresh empty `## [Unreleased]`; with `repoUrl` the compare links at the bottom are updated |
 | `releaseNotes(text, version)` | the body of one version (`"latest"` and `"Unreleased"` work, a leading `v` is fine), or `null` |
-| `lint(text)` | duplicate versions, versions not descending, missing or invalid dates, empty releases, dates in the wrong order |
+| `lint(text)` | duplicate versions, versions not descending, missing or impossible dates (`2026-02-30`), empty releases, dates in the wrong order, and `##` headings that are not a release (their text would otherwise vanish into the release above) |
 | `compare(a, b)` | semantic version order, with pre-releases below the release |
 
-`releaseVersion` refuses what would make the file wrong: nothing under Unreleased, a version that is not semver, one that already exists, or one that is not higher than the newest. Windows line endings are accepted; text it does not recognise is kept, never dropped.
+`releaseVersion` refuses what would make the file wrong: nothing under Unreleased, a version that is not semver, one that already exists, or one that is not higher than the newest. Windows line endings are accepted and kept by `addEntry` and `releaseVersion` (a file that mixes them gets the majority style); text it does not recognise is kept, never dropped.
+
+Headings: `## [1.2.0] - 2026-10-17` is the format; `## 1.2.0`, `## v1.2.0`, an en or em dash and `## 1.2.0 (2026-10-17)` are read too. Any other `##` heading is listed in `unrecognised` and by `lint`. Headings inside a code block (``` or ~~~) are text. `latestVersion` and `releaseNotes(text, "latest")` skip releases marked `[YANKED]`. A new item goes after the last item of the list in its section.

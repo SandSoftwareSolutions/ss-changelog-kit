@@ -122,3 +122,54 @@ test("Windows line endings and yanked releases", () => {
   assert.equal(c.releases[0].yanked, true);
   assert.throws(() => parseChangelog(5), TypeError);
 });
+
+test("Windows line endings are kept by addEntry and releaseVersion", () => {
+  const crlf = "# Changelog\r\n\r\n## [Unreleased]\r\n\r\n### Fixed\r\n- a\r\n\r\n## [1.0.0] - 2026-01-01\r\n\r\n### Added\r\n- first\r\n";
+  const added = addEntry(crlf, "Added", "b");
+  assert.ok(!/(?<!\r)\n/.test(added), "no bare \\n");
+  assert.equal(added, "# Changelog\r\n\r\n## [Unreleased]\r\n\r\n### Added\r\n- b\r\n\r\n### Fixed\r\n- a\r\n\r\n## [1.0.0] - 2026-01-01\r\n\r\n### Added\r\n- first\r\n");
+  const released = releaseVersion(added, "1.1.0", "2026-02-01", { repoUrl: "https://github.com/o/r" });
+  assert.ok(!/(?<!\r)\n/.test(released));
+  assert.match(released, /## \[1\.1\.0\] - 2026-02-01\r\n/);
+  assert.equal(addEntry("# Changelog\n", "Fixed", "x"), "# Changelog\n\n## [Unreleased]\n\n### Fixed\n- x\n", "LF files stay LF");
+});
+
+test("headings in other common styles are releases, and unknown ones are reported instead of silently merged", () => {
+  const text = "# Changelog\n\n## [Unreleased]\n\n## [1.2.0] — 2026-02-01\n\n### Added\n- b\n\n## v1.1.0 (2026-01-01)\n\n### Fixed\n- a\n\n## 1.0.0 – 2025-12-01\n- first\n\n## Misc notes\n- stray\n";
+  const parsed = parseChangelog(text);
+  assert.deepEqual(parsed.releases.map((r) => [r.version, r.date]), [["1.2.0", "2026-02-01"], ["1.1.0", "2026-01-01"], ["1.0.0", "2025-12-01"]]);
+  assert.deepEqual(parsed.unrecognised, [{ line: 18, text: "## Misc notes" }]);
+  assert.ok(lint(text).some((p) => /line 18: "## Misc notes" is not a release heading/.test(p)));
+  assert.deepEqual(lint(text).filter((p) => !/Misc notes/.test(p)), []);
+});
+
+test("a release heading inside a code block is only text", () => {
+  const text = "## [Unreleased]\n\n```md\n## [9.9.9] - 2020-01-01\n```\n\n## [1.0.0] - 2020-01-01\n- a\n";
+  const parsed = parseChangelog(text);
+  assert.deepEqual(parsed.releases.map((r) => r.version), ["1.0.0"]);
+  assert.ok(parsed.unreleased.body.includes("## [9.9.9]"));
+  assert.deepEqual(parsed.unrecognised, []);
+  assert.equal(addEntry(text, "Added", "x"), "## [Unreleased]\n\n```md\n## [9.9.9] - 2020-01-01\n```\n\n### Added\n- x\n\n## [1.0.0] - 2020-01-01\n- a\n");
+  const fencedFirst = "```\n## [Unreleased]\n```\n\n## [1.0.0] - 2020-01-01\n- a\n";
+  assert.match(addEntry(fencedFirst, "Added", "x"), /```\n\n## \[Unreleased\]\n\n### Added\n- x\n\n## \[1\.0\.0\]/);
+});
+
+test("a new item goes after the last item of the list, also when the list has blank lines", () => {
+  const text = "## [Unreleased]\n\n### Added\n- a\n\n- b\n  more of b\n\nSome remark.\n\n## [1.0.0] - 2020-01-01\n- z\n";
+  assert.equal(addEntry(text, "Added", "new"), "## [Unreleased]\n\n### Added\n- a\n\n- b\n  more of b\n- new\n\nSome remark.\n\n## [1.0.0] - 2020-01-01\n- z\n");
+});
+
+test("dates must be real dates", () => {
+  const unreleased = "## [Unreleased]\n- x\n";
+  for (const bad of ["2026-02-30", "2026-13-01", "2026-00-10", "2026-04-31", "2026-1-1"]) assert.throws(() => releaseVersion(unreleased, "1.0.0", bad), RangeError, bad);
+  assert.match(releaseVersion(unreleased, "1.0.0", "2028-02-29"), /## \[1\.0\.0\] - 2028-02-29/);
+  assert.throws(() => releaseVersion(unreleased, "1.0.0", "2027-02-29"), RangeError);
+  assert.ok(lint("## [1.0.0] - 2026-02-30\n- x\n").some((p) => /invalid date/.test(p)));
+});
+
+test("a yanked release is not the latest", () => {
+  const text = "## [Unreleased]\n\n## [2.0.0] - 2020-02-01 [YANKED]\n- bad\n\n## [1.0.0] - 2020-01-01\n- ok\n";
+  assert.equal(latestVersion(text), "1.0.0");
+  assert.equal(releaseNotes(text, "latest"), "- ok");
+  assert.equal(releaseNotes(text, "2.0.0"), "- bad");
+});

@@ -13,6 +13,8 @@ export interface Changelog {
   unreleased: Release | null;
   releases: Release[];
   links: Record<string, string>;
+  /** Level-2 headings that are not a release (and not inside a code block). Their text is part of the release above them. */
+  unrecognised: { line: number; text: string }[];
 }
 
 export type EntryType = "Added" | "Changed" | "Deprecated" | "Removed" | "Fixed" | "Security";
