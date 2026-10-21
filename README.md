@@ -10,6 +10,8 @@ Work with a `CHANGELOG.md` in the [Keep a Changelog](https://keepachangelog.com/
 npm install @sandsoftwaresolutions/changelog-kit
 ```
 
+Works with `import` and `require()`, and ships TypeScript types for both.
+
 ## Usage
 
 ```js
